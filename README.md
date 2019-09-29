@@ -21,7 +21,7 @@ Feature Transform](https://megvii-my.sharepoint.cn/:b:/g/personal/songlin_megvii
 ## Installation
 ### Building from source
 - `git clone https://github.com/StevenGrove/TreeFilter-Torch`
-- `cd TreeFilter-Seg/furnace/kernels/lib_tree_filter`
+- `cd TreeFilter-Torch/furnace/kernels/lib_tree_filter`
 - `sudo python3 setup.py build develop`
 
 This project implements three well-known algorithms of minimal spanning tree, i.e., Boruvka, Kruskal and  Prim. The default algorithm is set to *Boruvka* for its linear computational complexity in the plain graph. The user can change the configuration in the source file "lib_tree_filter/src/mst/mst.cu" .
