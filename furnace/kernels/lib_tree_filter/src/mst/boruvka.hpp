@@ -3,7 +3,7 @@
 // a structure to represent a weighted edge in graph 
 struct Edge 
 { 
-	int src, dest;
+    int src, dest;
     float weight; 
 }; 
 
@@ -11,14 +11,14 @@ struct Edge
 // and weighted graph as a collection of edges. 
 struct Graph 
 { 
-	// V-> Number of vertices, E-> Number of edges 
-	int V, E; 
+    // V-> Number of vertices, E-> Number of edges
+    int V, E;
 
-	// graph is represented as an array of edges. 
-	// Since the graph is undirected, the edge 
-	// from src to dest is also edge from dest 
-	// to src. Both are counted as 1 edge here. 
-	Edge* edge; 
+    // graph is represented as an array of edges.
+    // Since the graph is undirected, the edge
+    // from src to dest is also edge from dest
+    // to src. Both are counted as 1 edge here.
+    Edge* edge;
 }; 
 
 extern struct Graph* createGraph(int V, int E); 

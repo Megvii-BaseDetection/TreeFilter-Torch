@@ -20,7 +20,7 @@ Feature Transform](https://megvii-my.sharepoint.cn/:b:/g/personal/songlin_megvii
 
 ## Installation
 ### Building from source
-- `git clone https://github.com/StevenGrove/TreeFilter-Seg`
+- `git clone https://github.com/StevenGrove/TreeFilter-Torch`
 - `cd TreeFilter-Seg/furnace/kernels/lib_tree_filter`
 - `sudo python3 setup.py build develop`
 

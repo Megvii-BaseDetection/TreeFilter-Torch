@@ -13,8 +13,6 @@
 #include <THC/THCAtomics.cuh>
 #include <THC/THCDeviceUtils.cuh>
 
-#define CUDA_CHECK(call) if((call) != cudaSuccess) {cudaError_t err = cudaGetLastError(); std::cout << "CUDA error calling ""#call"", code is " << err << std::endl;}
-
 #define CUDA_NUM_THREADS 64
 #define GET_CUDA_BLOCKS(N) ceil((float)N / CUDA_NUM_THREADS)
 
@@ -22,81 +20,81 @@ __global__ void adj_vec_kernel(
         int batch_size, 
         int * edge_index, 
         int vertex_count,
-		int * adj_vec, 
+        int * adj_vec,
         int * adj_vec_len,
         int max_adj_per_node){
 
-	const int edge_count    = vertex_count - 1;
-	const int batch_idx     = blockIdx.x;
-	const int thread_idx    = threadIdx.x;
-	const int thread_count  = blockDim.x;
+    const int edge_count    = vertex_count - 1;
+    const int batch_idx     = blockIdx.x;
+    const int thread_idx    = threadIdx.x;
+    const int thread_count  = blockDim.x;
 
-	edge_index  += batch_idx * edge_count * 2;
-	adj_vec     += batch_idx * vertex_count * max_adj_per_node;
-	adj_vec_len += batch_idx * vertex_count;
+    edge_index  += batch_idx * edge_count * 2;
+    adj_vec     += batch_idx * vertex_count * max_adj_per_node;
+    adj_vec_len += batch_idx * vertex_count;
 
-	for (int i = thread_idx; i < edge_count; i += thread_count){
-		int source = edge_index[2 * i];
-		int target = edge_index[2 * i + 1];
-		int source_len = atomicAdd(&(adj_vec_len[source]), 1);
-		adj_vec[source * max_adj_per_node + source_len] = target;
-		int target_len = atomicAdd(&(adj_vec_len[target]), 1);
-		adj_vec[target * max_adj_per_node + target_len] = source;	
-	}
+    for (int i = thread_idx; i < edge_count; i += thread_count){
+        int source = edge_index[2 * i];
+        int target = edge_index[2 * i + 1];
+        int source_len = atomicAdd(&(adj_vec_len[source]), 1);
+        adj_vec[source * max_adj_per_node + source_len] = target;
+        int target_len = atomicAdd(&(adj_vec_len[target]), 1);
+        adj_vec[target * max_adj_per_node + target_len] = source;
+    }
 }
 
 __global__ void breadth_first_sort_kernel(
-		int * sorted_index, 
-		int * sorted_parent_index,
-		int * sorted_child_index,
-		int * adj_vec, 
-		int * adj_vec_len, 
-		int * parent_index,
-		int batch_size,
-		int vertex_count,
+        int * sorted_index,
+        int * sorted_parent_index,
+        int * sorted_child_index,
+        int * adj_vec,
+        int * adj_vec_len,
+        int * parent_index,
+        int batch_size,
+        int vertex_count,
         int max_adj_per_node){
 
-	const int batch_idx 	= blockIdx.x;
-	const int thread_idx 	= threadIdx.x;
-	const int thread_count 	= blockDim.x;
+    const int batch_idx     = blockIdx.x;
+    const int thread_idx    = threadIdx.x;
+    const int thread_count  = blockDim.x;
 
-	adj_vec 			+= batch_idx * vertex_count * max_adj_per_node;
-	adj_vec_len 		+= batch_idx * vertex_count;
-	parent_index 		+= batch_idx * vertex_count;
-	sorted_index 		+= batch_idx * vertex_count;
-	sorted_parent_index += batch_idx * vertex_count;
-	sorted_child_index 	+= batch_idx * vertex_count * max_adj_per_node;
-	
-	__shared__ int sorted_len;
-	if (thread_idx == 0) {
-		sorted_len = 1;
-		parent_index[0] = 0;
-		sorted_index[0] = 0;
-		sorted_parent_index[0] = 0;
-	}
-	__syncthreads();
-	
-	int i = thread_idx;
-	while (i < vertex_count){
-		if ((sorted_index[i] > 0) || (i == 0)){
-			int child_index = 0;
-			int par 		= parent_index[i];
-			int cur 		= sorted_index[i];
-			for (int j = 0; j < adj_vec_len[cur]; j++){
-				int child = adj_vec[cur * max_adj_per_node + j];
-				if (child != par){
-					int pos = atomicAdd(&(sorted_len), 1);
-					sorted_index[pos] 		 = child;
-					parent_index[pos]		 = cur;
-					sorted_parent_index[pos] = i;
-					sorted_child_index[i * max_adj_per_node + child_index] = pos;
+    adj_vec              += batch_idx * vertex_count * max_adj_per_node;
+    adj_vec_len          += batch_idx * vertex_count;
+    parent_index         += batch_idx * vertex_count;
+    sorted_index         += batch_idx * vertex_count;
+    sorted_parent_index  += batch_idx * vertex_count;
+    sorted_child_index   += batch_idx * vertex_count * max_adj_per_node;
+
+    __shared__ int sorted_len;
+    if (thread_idx == 0) {
+        sorted_len = 1;
+        parent_index[0] = 0;
+        sorted_index[0] = 0;
+        sorted_parent_index[0] = 0;
+    }
+    __syncthreads();
+
+    int i = thread_idx;
+    while (i < vertex_count){
+        if ((sorted_index[i] > 0) || (i == 0)){
+            int child_index = 0;
+            int par         = parent_index[i];
+            int cur         = sorted_index[i];
+            for (int j = 0; j < adj_vec_len[cur]; j++){
+                int child = adj_vec[cur * max_adj_per_node + j];
+                if (child != par){
+                    int pos = atomicAdd(&(sorted_len), 1);
+                    sorted_index[pos]        = child;
+                    parent_index[pos]        = cur;
+                    sorted_parent_index[pos] = i;
+                    sorted_child_index[i * max_adj_per_node + child_index] = pos;
                     child_index++;
-				}
-			}
-			i += thread_count;
-		}
-		__syncthreads();
-	}
+                }
+            }
+            i += thread_count;
+        }
+        __syncthreads();
+    }
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor>
@@ -135,5 +133,3 @@ bfs_forward(
 
     return std::make_tuple(sorted_index_tensor, sorted_parent_tensor, sorted_child_tensor);
 }
-
-

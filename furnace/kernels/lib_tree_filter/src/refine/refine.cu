@@ -13,8 +13,6 @@
 #include <THC/THCAtomics.cuh>
 #include <THC/THCDeviceUtils.cuh>
 
-#define CUDA_CHECK(call) if((call) != cudaSuccess) {cudaError_t err = cudaGetLastError(); std::cout << "CUDA error calling ""#call"", code is " << err << std::endl;}
-
 #define CUDA_NUM_THREADS         64
 #define GET_CUDA_CHANNEL(N)      ceil(512.0f / N)
 
@@ -28,45 +26,45 @@ __global__ void root_leaf_prop_kernel(
         int channel_size, 
         int vertex_count){
 
-	const int thread_idx 	= threadIdx.x;
-	const int batch_idx 	= blockIdx.x;
-	const int channel_idx	= blockIdx.y;
-	const int thread_count 	= blockDim.x;
-	const int channel_step 	= gridDim.y;
-	
-	in_data				+= batch_idx * vertex_count * channel_size;
-	out_data 			+= batch_idx * vertex_count * channel_size;
+    const int thread_idx    = threadIdx.x;
+    const int batch_idx     = blockIdx.x;
+    const int channel_idx   = blockIdx.y;
+    const int thread_count  = blockDim.x;
+    const int channel_step  = gridDim.y;
+
+    in_data             += batch_idx * vertex_count * channel_size;
+    out_data            += batch_idx * vertex_count * channel_size;
     weight              += batch_idx * vertex_count;
-	sorted_index 		+= batch_idx * vertex_count;
-	sorted_parent_index	+= batch_idx * vertex_count;
-	
-	__shared__ int node_per_thread[CUDA_NUM_THREADS];
-	node_per_thread[thread_idx] = -1;
+    sorted_index        += batch_idx * vertex_count;
+    sorted_parent_index += batch_idx * vertex_count;
+
+    __shared__ int node_per_thread[CUDA_NUM_THREADS];
+    node_per_thread[thread_idx] = -1;
     if (thread_idx == 0){
         weight[0]              = 0;
         sorted_parent_index[0] = 0;
     }
-	__syncthreads();
-	
-	int i = thread_idx;
-	while (i < vertex_count){
-		int par = sorted_parent_index[i];
-		int par_thread = par % thread_count;
-		if ((node_per_thread[par_thread] >= par) || (i == 0)){
+    __syncthreads();
+
+    int i = thread_idx;
+    while (i < vertex_count){
+        int par = sorted_parent_index[i];
+        int par_thread = par % thread_count;
+        if ((node_per_thread[par_thread] >= par) || (i == 0)){
             int cur_pos = sorted_index[i];
             int par_pos = sorted_index[par];
-			for (int k = channel_idx * vertex_count; k < channel_size * vertex_count;
-				   	k += channel_step * vertex_count){
+            for (int k = channel_idx * vertex_count; k < channel_size * vertex_count;
+                       k += channel_step * vertex_count){
                 float edge_weight = weight[i];
-				out_data[cur_pos + k] = in_data[i + k] * (1 - edge_weight * edge_weight) +
+                out_data[cur_pos + k] = in_data[i + k] * (1 - edge_weight * edge_weight) +
                                         out_data[par_pos + k] * edge_weight;
                 __threadfence_block();
-			}
-			node_per_thread[thread_idx] = i;
-			i += thread_count;
-		}
-		__syncthreads();
-	}
+            }
+            node_per_thread[thread_idx] = i;
+            i += thread_count;
+        }
+        __syncthreads();
+    }
 }
 
 __global__ void leaf_root_aggr_kernel(
@@ -80,40 +78,40 @@ __global__ void leaf_root_aggr_kernel(
         int vertex_count,
         int max_adj_per_node){
 
-	const int thread_idx 	= threadIdx.x;
-	const int batch_idx 	= blockIdx.x;
-	const int channel_idx	= blockIdx.y;
-	const int thread_count 	= blockDim.x;
-	const int channel_step 	= gridDim.y;
+    const int thread_idx    = threadIdx.x;
+    const int batch_idx     = blockIdx.x;
+    const int channel_idx   = blockIdx.y;
+    const int thread_count  = blockDim.x;
+    const int channel_step  = gridDim.y;
     
     if (in_data != NULL){
-    	in_data	+= batch_idx * vertex_count * channel_size;
+        in_data    += batch_idx * vertex_count * channel_size;
     }    
-	out_data 			+= batch_idx * vertex_count * channel_size;
-    weight              += batch_idx * vertex_count;
-	sorted_index 		+= batch_idx * vertex_count;
-	sorted_child_index	+= batch_idx * vertex_count * max_adj_per_node;
-	
-	__shared__ int node_per_thread[CUDA_NUM_THREADS];
-	node_per_thread[thread_idx] = vertex_count;
-	__syncthreads();
-	
-	int i = vertex_count - thread_idx - 1;
-	while (i >= 0){
+    out_data             += batch_idx * vertex_count * channel_size;
+    weight               += batch_idx * vertex_count;
+    sorted_index         += batch_idx * vertex_count;
+    sorted_child_index   += batch_idx * vertex_count * max_adj_per_node;
+
+    __shared__ int node_per_thread[CUDA_NUM_THREADS];
+    node_per_thread[thread_idx] = vertex_count;
+    __syncthreads();
+
+    int i = vertex_count - thread_idx - 1;
+    while (i >= 0){
         int child_len = 0;
-		bool valid = true;
-		for (int j = 0; j < max_adj_per_node; j++){
-			int child 			= sorted_child_index[i * max_adj_per_node + j];
-			int child_thread 	= (vertex_count - child - 1) % thread_count;
-            	
+        bool valid = true;
+        for (int j = 0; j < max_adj_per_node; j++){
+            int child        = sorted_child_index[i * max_adj_per_node + j];
+            int child_thread = (vertex_count - child - 1) % thread_count;
+
             if (child <= 0) break;
-			if (node_per_thread[child_thread] > child){
-				valid = false;
-				break;
-			}
+            if (node_per_thread[child_thread] > child){
+                valid = false;
+                break;
+            }
             child_len++;
-		}
-		if (valid){
+        }
+        if (valid){
             int cur_pos = sorted_index[i];
             for (int k = channel_idx * vertex_count; k < channel_size * vertex_count; 
                     k += channel_step * vertex_count){
@@ -128,11 +126,11 @@ __global__ void leaf_root_aggr_kernel(
                 }
                 out_data[i + k] = aggr_sum;
             }
-			node_per_thread[thread_idx] = i;
-			i -= thread_count;
-		}
-		__syncthreads();
-	}
+            node_per_thread[thread_idx] = i;
+            i -= thread_count;
+        }
+        __syncthreads();
+    }
 }
 
 __global__ void root_leaf_grad_kernel(
@@ -149,33 +147,33 @@ __global__ void root_leaf_grad_kernel(
         int grad_channel_size,
         int vertex_count){
 
-	const int thread_idx 	= threadIdx.x;
-	const int batch_idx 	= blockIdx.x;
-	const int channel_idx	= blockIdx.y;
-	const int thread_count 	= blockDim.x;
-	const int channel_step 	= gridDim.y;
+    const int thread_idx    = threadIdx.x;
+    const int batch_idx     = blockIdx.x;
+    const int channel_idx   = blockIdx.y;
+    const int thread_count  = blockDim.x;
+    const int channel_step  = gridDim.y;
     const int channel_size  = data_channel_size > grad_channel_size ? data_channel_size : grad_channel_size;
-	
-    in_data	            += batch_idx * vertex_count * data_channel_size;
+
+    in_data             += batch_idx * vertex_count * data_channel_size;
     in_grad             += batch_idx * vertex_count * grad_channel_size;
-	out_data 			+= batch_idx * vertex_count * data_channel_size;
+    out_data            += batch_idx * vertex_count * data_channel_size;
     out_grad            += batch_idx * vertex_count * grad_channel_size;
     weight              += batch_idx * vertex_count;
     grad                += batch_idx * vertex_count * channel_size;
-	sorted_index 		+= batch_idx * vertex_count;
-	sorted_parent_index	+= batch_idx * vertex_count;
-	
-	__shared__ int node_per_thread[CUDA_NUM_THREADS];
-	node_per_thread[thread_idx] = -1;
-	
-	int i = thread_idx;
-	while (i < vertex_count){
+    sorted_index        += batch_idx * vertex_count;
+    sorted_parent_index += batch_idx * vertex_count;
+
+    __shared__ int node_per_thread[CUDA_NUM_THREADS];
+    node_per_thread[thread_idx] = -1;
+
+    int i = thread_idx;
+    while (i < vertex_count){
         int cur         = i;
-		int par         = sorted_parent_index[i];
+        int par         = sorted_parent_index[i];
         int par_pos     = sorted_index[par];
-		int par_thread  = par % thread_count;
-		if ((cur == 0) || (node_per_thread[par_thread] >= par)){
-			for (int k = channel_idx; k < channel_size; k += channel_step){
+        int par_thread  = par % thread_count;
+        if ((cur == 0) || (node_per_thread[par_thread] >= par)){
+            for (int k = channel_idx; k < channel_size; k += channel_step){
                 float edge_weight   = weight[i];
                 int data_offset     = (k % data_channel_size) * vertex_count;
                 int grad_offset     = (k % grad_channel_size) * vertex_count;
@@ -186,18 +184,18 @@ __global__ void root_leaf_grad_kernel(
                     float right = in_data[cur + data_offset] * (out_grad[par + grad_offset] - edge_weight * in_grad[cur + grad_offset]);
 
                     grad[cur + out_offset]      = left + right;
-				    out_grad[cur + grad_offset] = in_grad[cur + grad_offset] * (1 - edge_weight * edge_weight) +
+                    out_grad[cur + grad_offset] = in_grad[cur + grad_offset] * (1 - edge_weight * edge_weight) +
                                                   out_grad[par + grad_offset] * edge_weight;
                     __threadfence_block();
                 }
                 else
                     grad[cur + out_offset] = 0;
-			}
-			node_per_thread[thread_idx] = i;
-			i += thread_count;
-		}
-		__syncthreads();
-	}
+            }
+            node_per_thread[thread_idx] = i;
+            i += thread_count;
+        }
+        __syncthreads();
+    }
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor>
@@ -370,4 +368,3 @@ at::Tensor refine_backward_weight(
 
     return grad_weight_tensor;
 }
-
