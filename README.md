@@ -1,6 +1,6 @@
 # TreeFilter-Torch
 This project provides a cuda implementation for "[Learnable Tree Filter for Structure-preserving
-Feature Transform](https://arxiv.org/pdf/1909.12513.pdf)" on PyTorch. Multiple semantic segmentation experiments are reproduced to verify the effectiveness of tree filtering module on PASCAL VOC2012 and Cityscapes. For the reason that the experiments in the paper were conducted using internal framework, this project reimplements them on PyTorch and reports detailed comparisons below. In addition, many thanks to [TorchSeg](https://github.com/ycszen/TorchSeg).
+Feature Transform](https://arxiv.org/pdf/1909.12513.pdf)" (NeurIPS2019) on PyTorch. Multiple semantic segmentation experiments are reproduced to verify the effectiveness of tree filtering module on PASCAL VOC2012 and Cityscapes. For the reason that the experiments in the paper were conducted using internal framework, this project reimplements them on PyTorch and reports detailed comparisons below. In addition, many thanks to [TorchSeg](https://github.com/ycszen/TorchSeg).
 
 ![introduce image](demo/introduce.png)
 
@@ -74,13 +74,11 @@ For detailed usage, please refer to the [Training](https://github.com/ycszen/Tor
 Please cite the learnable tree filter in your publications if it helps your research. 
 
 ```
-@misc{song2019learnable,
-    title={Learnable Tree Filter for Structure-preserving Feature Transform},
-    author={Lin Song and Yanwei Li and Zeming Li and Gang Yu and Hongbin Sun and Jian Sun and Nanning Zheng},
-    year={2019},
-    eprint={1909.12513},
-    archivePrefix={arXiv},
-    primaryClass={cs.CV}
+@inproceedings{song2019learnable,
+    title = {Learnable Tree Filter for Structure-preserving Feature Transform},
+    author = {Song, Lin and Li, Yanwei and Li, Zeming and Yu, Gang and Sun, Hongbin and Sun, Jian and Zheng, Nanning},
+    booktitle = {Advances in Neural Information Processing Systems},
+    year = {2019}
 }
 ```
 
