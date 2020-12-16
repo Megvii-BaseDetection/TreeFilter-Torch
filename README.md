@@ -1,4 +1,6 @@
 # TreeFilter-Torch
+By [Lin Song](https://linsong.me), [Yanwei Li](https://yanwei-li.com), [Zeming Li](http://www.zemingli.com), [Gang Yu](https://www.skicyyu.org), [Hongbin Sun](http://gr.xjtu.edu.cn/web/hsun/chinese), [Jian Sun](http://www.jiansun.org), Nanning Zheng.
+
 This project provides a cuda implementation for "[Learnable Tree Filter for Structure-preserving
 Feature Transform](https://arxiv.org/pdf/1909.12513.pdf)" (NeurIPS2019) on PyTorch. Multiple semantic segmentation experiments are reproduced to verify the effectiveness of tree filtering module on PASCAL VOC2012 and Cityscapes. For the reason that the experiments in the paper were conducted using internal framework, this project reimplements them on PyTorch and reports detailed comparisons below. In addition, many thanks to [TorchSeg](https://github.com/ycszen/TorchSeg).
 
