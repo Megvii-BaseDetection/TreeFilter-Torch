@@ -9,9 +9,7 @@
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 
-#include <THC/THC.h>
 #include <THC/THCAtomics.cuh>
-#include <THC/THCDeviceUtils.cuh>
 
 #define CUDA_NUM_THREADS 64
 #define GET_CUDA_BLOCKS(N) ceil((float)N / CUDA_NUM_THREADS)
