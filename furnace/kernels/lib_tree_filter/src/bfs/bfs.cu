@@ -111,13 +111,13 @@ bfs_forward(
     auto adj_vec_len_tensor     = at::zeros({batch_size, vertex_count}, options);
     auto parent_index_tensor    = at::zeros({batch_size, vertex_count}, options);
 
-    int * edge_index      = edge_index_tensor.contiguous().data<int>();
-    int * sorted_index    = sorted_index_tensor.contiguous().data<int>();
-    int * sorted_parent   = sorted_parent_tensor.contiguous().data<int>();
-    int * sorted_child    = sorted_child_tensor.contiguous().data<int>();
-    int * adj_vec         = adj_vec_tensor.contiguous().data<int>();
-    int * adj_vec_len     = adj_vec_len_tensor.contiguous().data<int>();
-    int * parent_index    = parent_index_tensor.contiguous().data<int>();
+    int * edge_index      = edge_index_tensor.contiguous().data_ptr<int>();
+    int * sorted_index    = sorted_index_tensor.contiguous().data_ptr<int>();
+    int * sorted_parent   = sorted_parent_tensor.contiguous().data_ptr<int>();
+    int * sorted_child    = sorted_child_tensor.contiguous().data_ptr<int>();
+    int * adj_vec         = adj_vec_tensor.contiguous().data_ptr<int>();
+    int * adj_vec_len     = adj_vec_len_tensor.contiguous().data_ptr<int>();
+    int * parent_index    = parent_index_tensor.contiguous().data_ptr<int>();
     
     cudaStream_t stream = at::cuda::getCurrentCUDAStream();        
 
